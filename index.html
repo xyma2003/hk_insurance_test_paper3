@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IIQE 長期保險刷題</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="questions.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f0f2f5; color: #333; }
+#app { max-width: 680px; margin: 0 auto; min-height: 100vh; background: #fff; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 20px; text-align: center; }
+.header h1 { font-size: 22px; margin-bottom: 4px; }
+.header p { font-size: 13px; opacity: 0.85; }
+
+/* Home */
+.home { padding: 30px 20px; }
+.home h2 { font-size: 18px; margin-bottom: 20px; text-align: center; color: #555; }
+.mode-card { display: block; background: #fff; border: 2px solid #eee; border-radius: 16px; padding: 28px 20px; margin-bottom: 16px; text-decoration: none; color: #333; transition: all 0.2s; cursor: pointer; }
+.mode-card:hover { border-color: #667eea; box-shadow: 0 4px 20px rgba(102,126,234,0.15); transform: translateY(-2px); }
+.mode-card .icon { font-size: 36px; margin-bottom: 12px; }
+.mode-card h3 { font-size: 18px; margin-bottom: 6px; }
+.mode-card p { font-size: 13px; color: #888; line-height: 1.5; }
+.mode-card .badge { display: inline-block; background: #ff4757; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 13px; margin-left: 6px; }
+
+/* Progress bar */
+.progress-bar { height: 4px; background: #eee; position: sticky; top: 0; z-index: 10; }
+.progress-bar .fill { height: 100%; background: #667eea; transition: width 0.3s; }
+
+/* Question */
+.question-page { padding: 20px; }
+.q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.q-meta .chapter { background: #eef; color: #667eea; padding: 3px 12px; border-radius: 12px; font-size: 12px; }
+.q-meta .counter { font-size: 14px; color: #999; }
+.q-text { font-size: 17px; line-height: 1.7; margin-bottom: 24px; white-space: pre-wrap; }
+
+/* Options */
+.options { display: flex; flex-direction: column; gap: 12px; }
+.opt-btn { display: flex; align-items: flex-start; gap: 10px; padding: 16px; border: 2px solid #e8e8e8; border-radius: 12px; background: #fff; cursor: pointer; text-align: left; font-size: 15px; line-height: 1.6; transition: all 0.15s; color: #333; }
+.opt-btn:hover:not(:disabled) { border-color: #667eea; background: #fafaff; }
+.opt-btn:disabled { cursor: default; }
+.opt-label { font-weight: 700; color: #667eea; min-width: 22px; flex-shrink: 0; }
+.opt-btn.correct { border-color: #2ed573; background: #f0fff4; }
+.opt-btn.correct .opt-label { color: #2ed573; }
+.opt-btn.wrong { border-color: #ff4757; background: #fff5f5; }
+.opt-btn.wrong .opt-label { color: #ff4757; }
+.opt-btn .opt-text { white-space: pre-wrap; }
+
+/* Feedback */
+.feedback { margin-top: 20px; padding: 16px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: 600; }
+.feedback.correct { background: #f0fff4; color: #2ed573; }
+.feedback.wrong { background: #fff5f5; color: #ff4757; }
+.next-btn { display: block; width: 100%; margin-top: 16px; padding: 14px; background: #667eea; color: #fff; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+.next-btn:hover { background: #5a67d8; }
+.nav-buttons { display: flex; gap: 12px; margin-top: 16px; }
+.nav-buttons .prev-btn { flex: 0 0 auto; padding: 14px 20px; background: #f8f9fa; color: #666; border: 2px solid #e8e8e8; border-radius: 12px; font-size: 15px; cursor: pointer; transition: all 0.2s; }
+.nav-buttons .prev-btn:hover { border-color: #ccc; background: #f0f0f0; }
+.nav-buttons .next-btn { flex: 1; margin-top: 0; }
+
+/* Inserted wrong question badge */
+.wrong-insert-badge { background: #fff3cd; color: #856404; padding: 3px 10px; border-radius: 10px; font-size: 12px; margin-left: 8px; }
+
+/* Exam result */
+.result-page { padding: 40px 20px; text-align: center; }
+.result-page .score { font-size: 48px; font-weight: 800; margin: 20px 0; }
+.result-page .score.pass { color: #2ed573; }
+.result-page .score.fail { color: #ff4757; }
+.result-page .score-label { font-size: 16px; color: #888; }
+.result-page .stats { display: flex; justify-content: center; gap: 30px; margin: 24px 0; }
+.result-page .stat { text-align: center; }
+.result-page .stat .num { font-size: 28px; font-weight: 700; }
+.result-page .stat .label { font-size: 13px; color: #999; }
+.result-page .stat .num.correct { color: #2ed573; }
+.result-page .stat .num.wrong { color: #ff4757; }
+
+/* Error book */
+.error-book { padding: 20px; }
+.error-book .summary { display: flex; gap: 16px; margin-bottom: 20px; }
+.error-book .summary-card { flex: 1; background: #f8f9fa; border-radius: 12px; padding: 16px; text-align: center; }
+.error-book .summary-card .num { font-size: 28px; font-weight: 700; }
+.error-book .summary-card .label { font-size: 13px; color: #888; }
+.error-item { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.error-item .q-preview { font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+.error-item .q-chapter { font-size: 12px; color: #999; }
+.error-item .q-progress { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.error-item .progress-dots { display: flex; gap: 4px; }
+.error-item .dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; }
+.error-item .dot.filled { background: #2ed573; }
+.error-item .remove-btn { margin-left: auto; background: none; border: 1px solid #ddd; border-radius: 6px; padding: 4px 10px; font-size: 12px; color: #888; cursor: pointer; }
+
+/* Nav */
+.nav-bar { display: flex; border-top: 1px solid #eee; background: #fff; position: sticky; bottom: 0; }
+.nav-bar button { flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-size: 13px; color: #888; transition: color 0.2s; }
+.nav-bar button.active { color: #667eea; font-weight: 600; }
+.nav-bar button .nav-icon { display: block; font-size: 20px; margin-bottom: 2px; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: #999; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <div v-if="view === 'home'">
+    <div class="header">
+      <h1>IIQE 長期保險刷題</h1>
+      <p>題庫共 {{ QUESTIONS.length }} 題 · 已刷 {{ seenCount }} / {{ QUESTIONS.length }}</p>
+    </div>
+    <div class="home">
+      <div class="mode-card" @click="startPractice()">
+        <div class="icon">📚</div>
+        <h3>刷題模式</h3>
+        <p>順序打亂，選對自動跳下一題，選錯提示正確答案。錯題本中的題目會每隔5-10題穿插進來。</p>
+      </div>
+      <div class="mode-card" @click="startExam()">
+        <div class="icon">📝</div>
+        <h3>模擬考試</h3>
+        <p>從全部{{ QUESTIONS.length }}題中隨機抽取50題，即時反饋，考完出分。</p>
+      </div>
+      <div class="mode-card" @click="view = 'errorBook'">
+        <div class="icon">❌</div>
+        <h3>錯題本 <span class="badge" v-if="errorCount > 0">{{ errorCount }}</span></h3>
+        <p>查看錯題，答對3次自動移除。可直接練習錯題。</p>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="active"><span class="nav-icon">🏠</span>首頁</button>
+      <button @click="view = 'errorBook'"><span class="nav-icon">❌</span>錯題本<template v-if="errorCount > 0"> ({{ errorCount }})</template></button>
+    </div>
+  </div>
+
+  <!-- PRACTICE / EXAM (shared question UI) -->
+  <div v-if="view === 'practice' || view === 'exam'">
+    <div class="progress-bar"><div class="fill" :style="{ width: progressPercent + '%' }"></div></div>
+    <div style="display:flex;justify-content:flex-end;padding:8px 16px 0;">
+      <button @click="view = 'home'" style="background:none;border:1px solid #ddd;border-radius:8px;padding:4px 14px;font-size:13px;color:#888;cursor:pointer;">✕ 退出</button>
+    </div>
+    <div class="question-page" v-if="currentQ">
+      <div class="q-meta">
+        <div>
+          <span class="chapter">章節 {{ currentQ.chapter }}</span>
+          <span class="wrong-insert-badge" v-if="isInsertedWrong">錯題複習</span>
+        </div>
+        <span class="counter">
+          <template v-if="view === 'exam'">{{ examIndex + 1 }} / {{ examTotal }}</template>
+          <template v-else>{{ practiceIndex + 1 }} / {{ practiceTotal }}</template>
+        </span>
+      </div>
+      <div class="q-text">{{ currentQ.question }}</div>
+      <div class="options">
+        <button v-for="key in ['a','b','c','d']" :key="key"
+          class="opt-btn"
+          :class="getOptionClass(key)"
+          :disabled="answered"
+          @click="selectOption(key)">
+          <span class="opt-label">{{ key.toUpperCase() }})</span>
+          <span class="opt-text">{{ currentQ.options[key] }}</span>
+        </button>
+      </div>
+      <div v-if="answered" class="feedback" :class="lastCorrect ? 'correct' : 'wrong'">
+        <template v-if="lastCorrect">✓ 答對了！</template>
+        <template v-else>✗ 答錯了。正確答案是 {{ currentQ.answer }}</template>
+      </div>
+      <div class="nav-buttons">
+        <button v-if="(view === 'practice' && practiceIndex > 0) || (view === 'exam' && examIndex > 0)" class="prev-btn" @click="prevQuestion()">← 上一題</button>
+        <button class="next-btn" @click="nextQuestion()">
+          <template v-if="view === 'exam' && examIndex + 1 >= examTotal">查看結果</template>
+          <template v-else-if="view === 'practice' && practiceIndex + 1 >= practiceTotal">完成刷題</template>
+          <template v-else>下一題 →</template>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXAM RESULT -->
+  <div v-if="view === 'examResult'" class="result-page">
+    <h2>模擬考試完成</h2>
+    <div class="score" :class="examScore >= 60 ? 'pass' : 'fail'">{{ examScore }}<span style="font-size:24px">分</span></div>
+    <div class="score-label">{{ examScore >= 60 ? '🎉 恭喜通過！' : '還需努力加油💪' }}</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="num correct">{{ examCorrect }}</div>
+        <div class="label">答對</div>
+      </div>
+      <div class="stat">
+        <div class="num wrong">{{ examWrong }}</div>
+        <div class="label">答錯</div>
+      </div>
+      <div class="stat">
+        <div class="num">{{ examTotal }}</div>
+        <div class="label">總題數</div>
+      </div>
+    </div>
+    <button class="next-btn" @click="view = 'home'" style="max-width:300px;margin:0 auto;">返回首頁</button>
+  </div>
+
+  <!-- ERROR BOOK -->
+  <div v-if="view === 'errorBook'">
+    <div class="header">
+      <h1>錯題本</h1>
+      <p>{{ errorCount }} 題待掌握</p>
+    </div>
+    <div class="error-book">
+      <div v-if="errorCount === 0" class="empty-state">
+        <div class="icon">🎉</div>
+        <p>錯題本為空，繼續保持！</p>
+      </div>
+      <template v-else>
+        <div class="summary">
+          <div class="summary-card">
+            <div class="num" style="color:#ff4757">{{ errorCount }}</div>
+            <div class="label">錯題數</div>
+          </div>
+          <div class="summary-card">
+            <div class="num" style="color:#2ed573">{{ masteredCount }}</div>
+            <div class="label">已掌握(移除)</div>
+          </div>
+        </div>
+        <button class="next-btn" @click="startErrorPractice()" style="margin-bottom:20px;">開始練習錯題</button>
+        <div class="error-item" v-for="item in errorList" :key="item.id">
+          <div class="q-preview">{{ getQById(item.id).question.substring(0, 80) }}{{ getQById(item.id).question.length > 80 ? '...' : '' }}</div>
+          <div class="q-chapter">題號 {{ item.id }} · 章節 {{ getQById(item.id).chapter }} · 正確答案 {{ getQById(item.id).answer }}</div>
+          <div class="q-progress">
+            <span style="font-size:12px;color:#999;">答對進度：</span>
+            <div class="progress-dots">
+              <div class="dot" :class="{ filled: item.correctCount >= 1 }"></div>
+              <div class="dot" :class="{ filled: item.correctCount >= 2 }"></div>
+              <div class="dot" :class="{ filled: item.correctCount >= 3 }"></div>
+            </div>
+            <span style="font-size:12px;color:#999;">{{ item.correctCount }}/3</span>
+            <button class="remove-btn" @click="removeFromErrorBook(item.id)">手動移除</button>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="nav-bar">
+      <button @click="view = 'home'"><span class="nav-icon">🏠</span>首頁</button>
+      <button class="active"><span class="nav-icon">❌</span>錯題本 ({{ errorCount }})</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp, reactive, computed, ref } = Vue;
+
+createApp({
+  setup() {
+    // ==================== DATA ====================
+    const QUESTIONS_REF = QUESTIONS;  // from questions.js
+
+    // Persistence
+    function loadData() {
+      try {
+        const raw = localStorage.getItem('iiqe_quiz_data');
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (!d.seenQuestionIds) d.seenQuestionIds = {};
+          // Seed seenQuestionIds from existing wrongQuestions (they were definitely answered before)
+          if (d.wrongQuestions) {
+            for (const qid of Object.keys(d.wrongQuestions)) {
+              if (!d.seenQuestionIds[qid]) d.seenQuestionIds[qid] = true;
+            }
+          }
+          return d;
+        }
+      } catch(e) {}
+      return { wrongQuestions: {}, totalMastered: 0, seenQuestionIds: {} };
+    }
+    function saveData() {
+      localStorage.setItem('iiqe_quiz_data', JSON.stringify(data));
+    }
+
+    const data = reactive(loadData());
+
+    // View state
+    const view = ref('home');  // home, practice, exam, examResult, errorBook
+
+    // Practice mode state
+    const practiceQueue = ref([]);  // array of { id, isWrongInsert }
+    const practiceIndex = ref(0);
+    const practiceCount = ref(0);
+    const nextWrongInsert = ref(0);  // counter for when to insert wrong question
+
+    // Exam mode state
+    const examQueue = ref([]);
+    const examIndex = ref(0);
+    const examTotal = ref(0);
+    const examCorrect = ref(0);
+    const examWrong = ref(0);
+    const examScore = ref(0);
+
+    // Shared question state
+    const answered = ref(false);
+    const selectedOption = ref(null);
+    const lastCorrect = ref(false);
+    const isInsertedWrong = ref(false);
+
+    // Answer history — stores { selected, correct } per question ID for review
+    const answerHistory = reactive({});
+
+    // Practice total (768 for regular, dynamic for error practice)
+    const practiceTotal = ref(768);
+
+    // ==================== COMPUTED ====================
+    const currentQ = computed(() => {
+      if (view.value === 'practice') {
+        const item = practiceQueue.value[practiceIndex.value];
+        return item ? getQById(item.id) : null;
+      } else if (view.value === 'exam') {
+        const id = examQueue.value[examIndex.value];
+        return id != null ? getQById(id) : null;
+      }
+      return null;
+    });
+
+    const progressPercent = computed(() => {
+      if (view.value === 'exam') {
+        return ((examIndex.value + (answered.value ? 1 : 0)) / examTotal.value) * 100;
+      } else if (view.value === 'practice') {
+        return ((practiceIndex.value + (answered.value ? 1 : 0)) / practiceTotal.value) * 100;
+      }
+      return 0;
+    });
+
+    const errorCount = computed(() => Object.keys(data.wrongQuestions).length);
+    const masteredCount = computed(() => data.totalMastered);
+    const seenCount = computed(() => Object.keys(data.seenQuestionIds).length);
+    const errorList = computed(() => {
+      return Object.entries(data.wrongQuestions)
+        .map(([id, info]) => ({ id: parseInt(id), ...info }))
+        .sort((a, b) => b.addedAt - a.addedAt);
+    });
+
+    // ==================== HELPERS ====================
+    function getQById(id) {
+      return QUESTIONS_REF.find(q => q.id === id);
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function getOptionClass(key) {
+      if (!answered.value) return '';
+      const correctKey = currentQ.value.answer.toLowerCase();
+      if (key === correctKey) return 'correct';
+      if (key === selectedOption.value) return 'wrong';
+      return '';
+    }
+
+    // ==================== ERROR BOOK LOGIC ====================
+    function addWrongQuestion(qId) {
+      if (!data.wrongQuestions[qId]) {
+        data.wrongQuestions[qId] = { correctCount: 0, addedAt: Date.now() };
+        saveData();
+      }
+    }
+
+    function markCorrectInErrorBook(qId) {
+      if (data.wrongQuestions[qId]) {
+        data.wrongQuestions[qId].correctCount++;
+        if (data.wrongQuestions[qId].correctCount >= 3) {
+          delete data.wrongQuestions[qId];
+          data.totalMastered++;
+        }
+        saveData();
+      }
+    }
+
+    function removeFromErrorBook(qId) {
+      if (data.wrongQuestions[qId]) {
+        delete data.wrongQuestions[qId];
+        saveData();
+      }
+    }
+
+    // ==================== PRACTICE MODE ====================
+    function startPractice() {
+      const allIds = shuffle(QUESTIONS_REF.map(q => q.id));
+      practiceQueue.value = allIds.map(id => ({ id, isWrongInsert: false }));
+      practiceIndex.value = 0;
+      practiceCount.value = 0;
+      practiceTotal.value = 768;
+      nextWrongInsert.value = 5 + Math.floor(Math.random() * 6);  // 5-10
+      // Clear history for fresh practice session
+      Object.keys(answerHistory).forEach(k => delete answerHistory[k]);
+      loadQuestion();
+      view.value = 'practice';
+    }
+
+    function startErrorPractice() {
+      const wrongIds = Object.keys(data.wrongQuestions).map(Number);
+      if (wrongIds.length === 0) return;
+      practiceQueue.value = shuffle(wrongIds).map(id => ({ id, isWrongInsert: true }));
+      practiceIndex.value = 0;
+      practiceCount.value = 0;
+      practiceTotal.value = wrongIds.length;
+      nextWrongInsert.value = 999;  // don't insert more during error practice
+      Object.keys(answerHistory).forEach(k => delete answerHistory[k]);
+      loadQuestion();
+      view.value = 'practice';
+    }
+
+    function maybeInsertWrongQuestion() {
+      // Don't insert if we're in error practice mode
+      if (nextWrongInsert.value >= 999) return;
+      if (practiceCount.value < nextWrongInsert.value) return;
+
+      const wrongIds = Object.keys(data.wrongQuestions).map(Number);
+      if (wrongIds.length === 0) {
+        nextWrongInsert.value = practiceCount.value + 5 + Math.floor(Math.random() * 6);
+        return;
+      }
+
+      // Pick a random wrong question
+      const pickId = wrongIds[Math.floor(Math.random() * wrongIds.length)];
+      // Insert at current position so it shows immediately as next question
+      practiceQueue.value.splice(practiceIndex.value, 0, { id: pickId, isWrongInsert: true });
+      nextWrongInsert.value = practiceCount.value + 5 + Math.floor(Math.random() * 6);
+    }
+
+    // ==================== EXAM MODE ====================
+    function startExam() {
+      const sampled = shuffle(QUESTIONS_REF.map(q => q.id)).slice(0, 50);
+      examQueue.value = sampled;
+      examIndex.value = 0;
+      examTotal.value = 50;
+      examCorrect.value = 0;
+      examWrong.value = 0;
+      examScore.value = 0;
+      Object.keys(answerHistory).forEach(k => delete answerHistory[k]);
+      loadQuestion();
+      view.value = 'exam';
+    }
+
+    // ==================== ANSWER HANDLING ====================
+    function selectOption(key) {
+      if (answered.value) return;
+      selectedOption.value = key;
+      answered.value = true;
+
+      const correctKey = currentQ.value.answer.toLowerCase();
+      const isCorrect = key === correctKey;
+      lastCorrect.value = isCorrect;
+
+      const qId = currentQ.value.id;
+
+      // Store in history for review
+      answerHistory[qId] = { selected: key, correct: isCorrect };
+
+      // Track unique seen questions (persisted, deduplicated)
+      if (!data.seenQuestionIds[qId]) {
+        data.seenQuestionIds[qId] = true;
+        saveData();
+      }
+
+      if (isCorrect) {
+        // If this was a wrong question, increment correct count
+        if (data.wrongQuestions[qId]) {
+          markCorrectInErrorBook(qId);
+        }
+      } else {
+        // Wrong answer — add to error book
+        addWrongQuestion(qId);
+      }
+
+      if (view.value === 'exam') {
+        if (isCorrect) examCorrect.value++;
+        else examWrong.value++;
+      }
+    }
+
+    function nextQuestion() {
+      if (view.value === 'exam') {
+        if (examIndex.value + 1 >= examTotal.value) {
+          // Exam finished
+          examScore.value = Math.round((examCorrect.value / examTotal.value) * 100);
+          view.value = 'examResult';
+          return;
+        }
+        examIndex.value++;
+      } else {
+        // Practice mode
+        practiceIndex.value++;
+        practiceCount.value++;
+
+        // Check if we should insert a wrong question
+        maybeInsertWrongQuestion();
+
+        // Check if we've run through all questions
+        if (practiceIndex.value >= practiceQueue.value.length) {
+          if (nextWrongInsert.value >= 999) {
+            // Error practice mode finished — go back to error book
+            view.value = 'errorBook';
+            return;
+          }
+          // Regular practice finished — go home
+          view.value = 'home';
+          return;
+        }
+      }
+      loadQuestion();
+    }
+
+    function prevQuestion() {
+      if (view.value === 'exam') {
+        if (examIndex.value > 0) examIndex.value--;
+      } else {
+        if (practiceIndex.value > 0) practiceIndex.value--;
+      }
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const qId = currentQ.value ? currentQ.value.id : null;
+      const hist = qId != null ? answerHistory[qId] : null;
+      if (hist) {
+        answered.value = true;
+        selectedOption.value = hist.selected;
+        lastCorrect.value = hist.correct;
+      } else {
+        answered.value = false;
+        selectedOption.value = null;
+        lastCorrect.value = false;
+      }
+      const item = practiceQueue.value[practiceIndex.value];
+      isInsertedWrong.value = item ? item.isWrongInsert : false;
+    }
+
+    // ==================== RETURN ====================
+    return {
+      QUESTIONS: QUESTIONS_REF,
+      view,
+      currentQ,
+      answered,
+      selectedOption,
+      lastCorrect,
+      isInsertedWrong,
+      progressPercent,
+      practiceIndex,
+      practiceTotal,
+      examIndex,
+      examTotal,
+      examCorrect,
+      examWrong,
+      examScore,
+      errorCount,
+      masteredCount,
+      seenCount,
+      errorList,
+      getQById,
+      getOptionClass,
+      startPractice,
+      startExam,
+      startErrorPractice,
+      selectOption,
+      nextQuestion,
+      prevQuestion,
+      removeFromErrorBook,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
