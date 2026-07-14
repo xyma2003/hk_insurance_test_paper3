@@ -111,10 +111,15 @@ body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-ser
       <p>題庫共 {{ QUESTIONS.length }} 題 · 已刷 {{ seenCount }} / {{ QUESTIONS.length }}</p>
     </div>
     <div class="home">
-      <div class="mode-card" @click="startPractice()">
+      <div class="mode-card" @click="startPractice('unseen')">
+        <div class="icon">🆕</div>
+        <h3>刷未做題 <span class="badge" v-if="unseenCount > 0" style="background:#667eea">{{ unseenCount }}</span></h3>
+        <p>優先推送你還沒刷過的題（剩餘 {{ unseenCount }} 題），刷完後自動循環全部題目。錯題每隔5-10題穿插。</p>
+      </div>
+      <div class="mode-card" @click="startPractice('all')">
         <div class="icon">📚</div>
-        <h3>刷題模式</h3>
-        <p>順序打亂，選對自動跳下一題，選錯提示正確答案。錯題本中的題目會每隔5-10題穿插進來。</p>
+        <h3>刷全部題</h3>
+        <p>768題完全打亂順序，從頭開始刷。錯題每隔5-10題穿插進來。</p>
       </div>
       <div class="mode-card" @click="startExam()">
         <div class="icon">📝</div>
@@ -330,6 +335,7 @@ createApp({
     const errorCount = computed(() => Object.keys(data.wrongQuestions).length);
     const masteredCount = computed(() => data.totalMastered);
     const seenCount = computed(() => Object.keys(data.seenQuestionIds).length);
+    const unseenCount = computed(() => QUESTIONS_REF.length - seenCount.value);
     const errorList = computed(() => {
       return Object.entries(data.wrongQuestions)
         .map(([id, info]) => ({ id: parseInt(id), ...info }))
@@ -385,9 +391,21 @@ createApp({
     }
 
     // ==================== PRACTICE MODE ====================
-    function startPractice() {
-      const allIds = shuffle(QUESTIONS_REF.map(q => q.id));
-      practiceQueue.value = allIds.map(id => ({ id, isWrongInsert: false }));
+    function startPractice(mode) {
+      const allIds = QUESTIONS_REF.map(q => q.id);
+      let queueIds;
+
+      if (mode === 'unseen') {
+        // 优先推送没刷过的题，刷完后接上已刷的
+        const unseen = allIds.filter(id => !data.seenQuestionIds[id]);
+        const seen = allIds.filter(id => data.seenQuestionIds[id]);
+        queueIds = [...shuffle(unseen), ...shuffle(seen)];
+      } else {
+        // 完全打乱
+        queueIds = shuffle(allIds);
+      }
+
+      practiceQueue.value = queueIds.map(id => ({ id, isWrongInsert: false }));
       practiceIndex.value = 0;
       practiceCount.value = 0;
       practiceTotal.value = 768;
@@ -557,6 +575,7 @@ createApp({
       errorCount,
       masteredCount,
       seenCount,
+      unseenCount,
       errorList,
       getQById,
       getOptionClass,
