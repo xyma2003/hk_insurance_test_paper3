@@ -58,6 +58,8 @@ body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-ser
 .nav-buttons { display: flex; gap: 12px; margin-top: 16px; }
 .nav-buttons .prev-btn { flex: 0 0 auto; padding: 14px 20px; background: #f8f9fa; color: #666; border: 2px solid #e8e8e8; border-radius: 12px; font-size: 15px; cursor: pointer; transition: all 0.2s; }
 .nav-buttons .prev-btn:hover { border-color: #ccc; background: #f0f0f0; }
+.nav-buttons .remove-err-btn { flex: 0 0 auto; padding: 14px 16px; background: #fff; color: #ff4757; border: 2px solid #ffcdd2; border-radius: 12px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.nav-buttons .remove-err-btn:hover { background: #fff5f5; border-color: #ff4757; }
 .nav-buttons .next-btn { flex: 1; margin-top: 0; }
 
 /* Inserted wrong question badge */
@@ -172,6 +174,7 @@ body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-ser
       </div>
       <div class="nav-buttons">
         <button v-if="(view === 'practice' && practiceIndex > 0) || (view === 'exam' && examIndex > 0)" class="prev-btn" @click="prevQuestion()">← 上一題</button>
+        <button v-if="currentQ && data.wrongQuestions[currentQ.id]" class="remove-err-btn" @click="removeCurrentFromErrorBook()">🗑 移出錯題本</button>
         <button class="next-btn" @click="nextQuestion()">
           <template v-if="view === 'exam' && examIndex + 1 >= examTotal">查看結果</template>
           <template v-else-if="view === 'practice' && practiceIndex + 1 >= practiceTotal">完成刷題</template>
@@ -390,6 +393,13 @@ createApp({
       }
     }
 
+    function removeCurrentFromErrorBook() {
+      if (currentQ.value && data.wrongQuestions[currentQ.value.id]) {
+        removeFromErrorBook(currentQ.value.id);
+        nextQuestion();
+      }
+    }
+
     // ==================== PRACTICE MODE ====================
     function startPractice(mode) {
       const allIds = QUESTIONS_REF.map(q => q.id);
@@ -586,6 +596,8 @@ createApp({
       nextQuestion,
       prevQuestion,
       removeFromErrorBook,
+      removeCurrentFromErrorBook,
+      data,
     };
   }
 }).mount('#app');
