@@ -6,6 +6,7 @@
 <title>IIQE 長期保險刷題</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="questions.js"></script>
+<script src="ai_questions_set1.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f0f2f5; color: #333; }
@@ -128,6 +129,16 @@ body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-ser
         <h3>模擬考試</h3>
         <p>從全部{{ QUESTIONS.length }}題中隨機抽取50題，即時反饋，考完出分。</p>
       </div>
+      <div class="mode-card" @click="startAIExam(1)">
+        <div class="icon">🤖</div>
+        <h3>AI出題模考 - 第1套</h3>
+        <p>50道AI新題（非題庫原題），基於官方手冊知識點出題，含解析。考完可看每題解析。</p>
+      </div>
+      <div class="mode-card" @click="startAIExam(2)" v-if="aiSet2Ready">
+        <div class="icon">🤖</div>
+        <h3>AI出題模考 - 第2套</h3>
+        <p>50道AI新題（非題庫原題），基於官方手冊知識點出題，含解析。</p>
+      </div>
       <div class="mode-card" @click="view = 'errorBook'">
         <div class="icon">❌</div>
         <h3>錯題本 <span class="badge" v-if="errorCount > 0">{{ errorCount }}</span></h3>
@@ -201,6 +212,83 @@ body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-ser
       <div class="stat">
         <div class="num">{{ examTotal }}</div>
         <div class="label">總題數</div>
+      </div>
+    </div>
+    <button class="next-btn" @click="view = 'home'" style="max-width:300px;margin:0 auto;">返回首頁</button>
+  </div>
+
+  <!-- AI EXAM -->
+  <div v-if="view === 'aiExam' && aiCurrentQ">
+    <div class="progress-bar"><div class="fill" :style="{ width: ((aiExamIndex + (aiExamAnswered ? 1 : 0)) / aiExamTotal * 100) + '%' }"></div></div>
+    <div style="display:flex;justify-content:flex-end;padding:8px 16px 0;">
+      <button @click="view = 'home'" style="background:none;border:1px solid #ddd;border-radius:8px;padding:4px 14px;font-size:13px;color:#888;cursor:pointer;">✕ 退出</button>
+    </div>
+    <div class="question-page">
+      <div class="q-meta">
+        <div>
+          <span class="chapter">章節 {{ aiCurrentQ.chapter }}</span>
+          <span class="wrong-insert-badge" style="background:#e8f5e9;color:#2e7d32;">AI出題 第{{ aiExamSet }}套</span>
+        </div>
+        <span class="counter">{{ aiExamIndex + 1 }} / {{ aiExamTotal }}</span>
+      </div>
+      <div class="q-text">{{ aiCurrentQ.question }}</div>
+      <div class="options">
+        <button v-for="key in ['a','b','c','d']" :key="key"
+          class="opt-btn"
+          :class="aiGetOptionClass(key)"
+          :disabled="aiExamAnswered"
+          @click="aiSelectOption(key)">
+          <span class="opt-label">{{ key.toUpperCase() }})</span>
+          <span class="opt-text">{{ aiCurrentQ.options[key] }}</span>
+        </button>
+      </div>
+      <div v-if="aiExamAnswered" class="feedback" :class="aiExamLastCorrect ? 'correct' : 'wrong'">
+        <template v-if="aiExamLastCorrect">✓ 答對了！</template>
+        <template v-else>✗ 答錯了。正確答案是 {{ aiCurrentQ.answer }}</template>
+      </div>
+      <div v-if="aiExamAnswered && aiCurrentQ.explanation" style="margin-top:12px;padding:14px;background:#f8f9fa;border-radius:10px;font-size:14px;line-height:1.6;color:#555;">
+        <strong>📝 解析：</strong>{{ aiCurrentQ.explanation }}
+      </div>
+      <div v-if="aiExamAnswered" class="nav-buttons">
+        <button class="next-btn" @click="aiNextQuestion()">
+          <template v-if="aiExamIndex + 1 >= aiExamTotal">查看結果</template>
+          <template v-else>下一題 →</template>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI EXAM RESULT -->
+  <div v-if="view === 'aiExamResult'" class="result-page">
+    <h2>AI出題模考 - 第{{ aiExamSet }}套 完成</h2>
+    <div class="score" :class="aiExamScore >= 70 ? 'pass' : 'fail'">{{ aiExamScore }}<span style="font-size:24px">分</span></div>
+    <div class="score-label">{{ aiExamScore >= 70 ? '🎉 恭喜通過！' : '還需努力加油💪' }}</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="num correct">{{ aiExamCorrect }}</div>
+        <div class="label">答對</div>
+      </div>
+      <div class="stat">
+        <div class="num wrong">{{ aiExamWrong }}</div>
+        <div class="label">答錯</div>
+      </div>
+      <div class="stat">
+        <div class="num">{{ aiExamTotal }}</div>
+        <div class="label">總題數</div>
+      </div>
+    </div>
+    <div style="text-align:left;padding:0 20px 20px;">
+      <h3 style="font-size:16px;margin-bottom:12px;">📋 逐題回顧</h3>
+      <div v-for="(ans, idx) in aiExamAnswers" :key="idx" style="background:#fff;border:1px solid #eee;border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span :style="{ color: ans.correct ? '#2ed573' : '#ff4757', fontWeight: 700 }">{{ ans.correct ? '✓' : '✗' }}</span>
+          <span style="font-size:13px;color:#999;">第{{ idx+1 }}題</span>
+          <span style="font-size:13px;color:#999;">你選: {{ ans.selected.toUpperCase() }} | 正確: {{ ans.answer }}</span>
+        </div>
+        <div style="font-size:14px;line-height:1.6;margin-bottom:6px;white-space:pre-wrap;">{{ ans.question }}</div>
+        <div v-if="ans.explanation" style="font-size:13px;color:#666;background:#f8f9fa;padding:8px 10px;border-radius:6px;">
+          <strong>解析：</strong>{{ ans.explanation }}
+        </div>
       </div>
     </div>
     <button class="next-btn" @click="view = 'home'" style="max-width:300px;margin:0 auto;">返回首頁</button>
@@ -301,6 +389,17 @@ createApp({
     const examCorrect = ref(0);
     const examWrong = ref(0);
     const examScore = ref(0);
+
+    // AI exam mode state
+    const aiExamQuestions = ref([]);  // full question objects, not just IDs
+    const aiExamIndex = ref(0);
+    const aiExamTotal = ref(0);
+    const aiExamCorrect = ref(0);
+    const aiExamWrong = ref(0);
+    const aiExamScore = ref(0);
+    const aiExamAnswers = ref([]);  // store per-question answer for review
+    const aiExamSet = ref(0);  // 1 or 2
+    const aiSet2Ready = ref(false);  // will be true when set 2 is loaded
 
     // Shared question state
     const answered = ref(false);
@@ -471,6 +570,78 @@ createApp({
       view.value = 'exam';
     }
 
+    // ==================== AI EXAM MODE ====================
+    function startAIExam(setNum) {
+      let questions;
+      if (setNum === 1) {
+        questions = shuffle([...AI_QUESTIONS_SET1]);
+      } else {
+        // Set 2 not ready yet
+        return;
+      }
+      aiExamQuestions.value = questions;
+      aiExamSet.value = setNum;
+      aiExamIndex.value = 0;
+      aiExamTotal.value = questions.length;
+      aiExamCorrect.value = 0;
+      aiExamWrong.value = 0;
+      aiExamScore.value = 0;
+      aiExamAnswers.value = [];
+      view.value = 'aiExam';
+    }
+
+    const aiCurrentQ = computed(() => {
+      return aiExamQuestions.value[aiExamIndex.value] || null;
+    });
+
+    const aiExamAnswered = ref(false);
+    const aiExamSelected = ref(null);
+    const aiExamLastCorrect = ref(false);
+
+    function aiSelectOption(key) {
+      if (aiExamAnswered.value) return;
+      aiExamSelected.value = key;
+      aiExamAnswered.value = true;
+      const correctKey = aiCurrentQ.value.answer.toLowerCase() === key.toLowerCase();
+      // Store answer
+      aiExamAnswers.value.push({
+        qId: aiCurrentQ.value.id,
+        selected: key,
+        correct: correctKey,
+        question: aiCurrentQ.value.question,
+        options: aiCurrentQ.value.options,
+        answer: aiCurrentQ.value.answer,
+        explanation: aiCurrentQ.value.explanation || ''
+      });
+      if (correctKey) {
+        aiExamCorrect.value++;
+        aiExamLastCorrect.value = true;
+      } else {
+        aiExamWrong.value++;
+        aiExamLastCorrect.value = false;
+      }
+    }
+
+    function aiNextQuestion() {
+      if (aiExamIndex.value + 1 >= aiExamTotal.value) {
+        aiExamScore.value = Math.round((aiExamCorrect.value / aiExamTotal.value) * 100);
+        view.value = 'aiExamResult';
+        return;
+      }
+      aiExamIndex.value++;
+      aiExamAnswered.value = false;
+      aiExamSelected.value = null;
+      aiExamLastCorrect.value = false;
+    }
+
+    function aiGetOptionClass(key) {
+      if (!aiExamAnswered.value) return '';
+      const correctKey = aiCurrentQ.value.answer.toLowerCase();
+      if (key === correctKey) return 'correct';
+      if (key === aiExamSelected.value) return 'wrong';
+      return '';
+    }
+
     // ==================== ANSWER HANDLING ====================
     function selectOption(key) {
       if (answered.value) return;
@@ -598,6 +769,23 @@ createApp({
       removeFromErrorBook,
       removeCurrentFromErrorBook,
       data,
+      // AI exam
+      aiSet2Ready,
+      startAIExam,
+      aiCurrentQ,
+      aiExamIndex,
+      aiExamTotal,
+      aiExamCorrect,
+      aiExamWrong,
+      aiExamScore,
+      aiExamSet,
+      aiExamAnswered,
+      aiExamSelected,
+      aiExamLastCorrect,
+      aiExamAnswers,
+      aiSelectOption,
+      aiNextQuestion,
+      aiGetOptionClass,
     };
   }
 }).mount('#app');
