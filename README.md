@@ -33,8 +33,8 @@
 ## 使用方法
 
 ```bash
-git clone https://github.com/xyma2003/hk_insurance_test_paper3.git
-cd hk_insurance_test_paper3
+git clone https://github.com/xyma2003/hk-insurance-paper3.git
+cd hk-insurance-paper3
 open index.html
 ```
 
